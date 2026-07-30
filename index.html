@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solstice Health — Sign in</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-hero">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 26 26" fill="none">
+        <circle cx="13" cy="13" r="6" fill="#9FCCB2"/>
+        <g stroke="#9FCCB2" stroke-width="1.6" stroke-linecap="round">
+          <line x1="13" y1="1" x2="13" y2="4"/>
+          <line x1="13" y1="22" x2="13" y2="25"/>
+          <line x1="1" y1="13" x2="4" y2="13"/>
+          <line x1="22" y1="13" x2="25" y2="13"/>
+        </g>
+      </svg>
+      Solstice Health
+    </div>
+
+    <p class="hero-quote">
+      Care that moves with <span>your day</span>, not the other way around.
+      Book, reschedule, and track visits in one place.
+    </p>
+
+    <p class="hero-foot mono">Patient portal — demo environment</p>
+  </div>
+
+  <div class="login-form-side">
+    <div class="login-card">
+      <div class="toggle-row">
+        <button id="tab-signin" class="active" type="button">Sign in</button>
+        <button id="tab-signup" type="button">Create account</button>
+      </div>
+
+      <!-- Sign in -->
+      <form id="form-signin">
+        <div class="field">
+          <label for="si-email">Email</label>
+          <input id="si-email" type="email" required autocomplete="email" placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label for="si-password">Password</label>
+          <input id="si-password" type="password" required autocomplete="current-password" placeholder="••••••••">
+        </div>
+        <div class="field-error" id="si-error" role="alert"></div>
+        <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+        <p class="mono" style="font-size:0.78rem;color:var(--slate-soft);margin-top:16px;">
+          No account yet? Use "Create account" above — this demo stores data only in your browser.
+        </p>
+      </form>
+
+      <!-- Sign up -->
+      <form id="form-signup" style="display:none;">
+        <div class="field">
+          <label for="su-name">Full name</label>
+          <input id="su-name" type="text" required autocomplete="name" placeholder="Jordan Rivera">
+        </div>
+        <div class="field">
+          <label for="su-email">Email</label>
+          <input id="su-email" type="email" required autocomplete="email" placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label for="su-password">Password</label>
+          <input id="su-password" type="password" required minlength="4" autocomplete="new-password" placeholder="At least 4 characters">
+        </div>
+        <div class="field-error" id="su-error" role="alert"></div>
+        <button class="btn btn-primary btn-block" type="submit">Create account</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  // If already signed in, skip straight to dashboard.
+  if (currentUser()) window.location.href = 'pages/dashboard.html';
+
+  const tabSignin = document.getElementById('tab-signin');
+  const tabSignup = document.getElementById('tab-signup');
+  const formSignin = document.getElementById('form-signin');
+  const formSignup = document.getElementById('form-signup');
+
+  tabSignin.addEventListener('click', () => {
+    tabSignin.classList.add('active'); tabSignup.classList.remove('active');
+    formSignin.style.display = 'block'; formSignup.style.display = 'none';
+  });
+  tabSignup.addEventListener('click', () => {
+    tabSignup.classList.add('active'); tabSignin.classList.remove('active');
+    formSignup.style.display = 'block'; formSignin.style.display = 'none';
+  });
+
+  formSignin.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('si-email').value.trim();
+    const password = document.getElementById('si-password').value;
+    const result = signIn(email, password);
+    if (result.ok) {
+      window.location.href = 'pages/dashboard.html';
+    } else {
+      document.getElementById('si-error').textContent = result.error;
+    }
+  });
+
+  formSignup.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('su-name').value.trim();
+    const email = document.getElementById('su-email').value.trim();
+    const password = document.getElementById('su-password').value;
+    const result = signUp(name, email, password);
+    if (result.ok) {
+      window.location.href = 'pages/dashboard.html';
+    } else {
+      document.getElementById('su-error').textContent = result.error;
+    }
+  });
+</script>
+</body>
+</html>

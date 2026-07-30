@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booked — Solstice Health</title>
+<link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+<div class="confirm-wrap">
+  <div class="confirm-card">
+    <div class="check-badge">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+        <path d="M5 13l5 5L19 7" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <p class="eyebrow">Confirmed</p>
+    <h1 style="font-size:1.6rem;margin-top:6px;margin-bottom:22px;">You're booked.</h1>
+
+    <div class="ticket" style="margin-bottom:26px;">
+      <div class="ticket-main" id="confirm-details">
+        <!-- filled by JS -->
+      </div>
+      <div class="ticket-stub" id="confirm-stub">
+        <span class="ticket-tear"></span>
+        <span class="big" id="stub-day">—</span>
+        <span class="small" id="stub-month">—</span>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-ghost" id="ics-btn">Add to calendar</button>
+      <a class="btn btn-dark" href="dashboard.html">Back to dashboard</a>
+    </div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+  const user = requireAuth();
+  if (user) {
+    const raw = sessionStorage.getItem('sh_last_appt');
+    const appt = raw ? JSON.parse(raw) : null;
+
+    if (!appt) {
+      window.location.href = 'dashboard.html';
+    } else {
+      const d = new Date(appt.isoDate);
+      document.getElementById('confirm-details').innerHTML = `
+        <span class="pill pill-upcoming">Upcoming</span>
+        <h2 style="font-size:1.2rem;margin-top:10px;">${appt.doctorName}</h2>
+        <p style="color:var(--slate-soft);margin-top:2px;">${appt.spec}</p>
+        <p class="mono" style="margin-top:14px;font-size:0.85rem;">
+          ${d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} · ${appt.label}
+        </p>`;
+      document.getElementById('stub-day').textContent = d.getDate();
+      document.getElementById('stub-month').textContent = d.toLocaleDateString(undefined, { month: 'short' });
+
+      document.getElementById('ics-btn').addEventListener('click', () => downloadICS(appt));
+    }
+  }
+</script>
+</body>
+</html>

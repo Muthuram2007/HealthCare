@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book appointment — Solstice Health</title>
+<link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 26 26" fill="none">
+        <circle cx="13" cy="13" r="6" fill="#9FCCB2"/>
+        <g stroke="#9FCCB2" stroke-width="1.6" stroke-linecap="round">
+          <line x1="13" y1="1" x2="13" y2="4"/>
+          <line x1="13" y1="22" x2="13" y2="25"/>
+          <line x1="1" y1="13" x2="4" y2="13"/>
+          <line x1="22" y1="13" x2="25" y2="13"/>
+        </g>
+      </svg>
+      Solstice
+    </div>
+    <ul class="nav-list">
+      <li><a href="dashboard.html">Overview</a></li>
+      <li><a href="book.html" class="active">Book appointment</a></li>
+      <li><a href="dashboard.html#history">My appointments</a></li>
+    </ul>
+    <div class="sidebar-foot">
+      <div class="user-chip">
+        <span class="avatar" id="user-avatar">?</span>
+        <span id="user-name">—</span>
+      </div>
+      <button class="logout-link" id="logout-btn" type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topline">
+      <div>
+        <p class="eyebrow">New appointment</p>
+        <h1 style="font-size:1.7rem;">Pick a provider and a time</h1>
+      </div>
+    </div>
+
+    <div class="book-layout">
+      <div class="doctor-list" id="doctor-list"></div>
+
+      <div class="dial-panel">
+        <div class="day-tabs" id="day-tabs"></div>
+        <div class="dial-wrap">
+          <svg id="dial" width="300" height="300"></svg>
+        </div>
+        <p style="text-align:center;color:var(--slate-soft);font-size:0.85rem;">
+          Filled dots are open — tap one to select. Faint dots are already booked.
+        </p>
+        <div class="selected-summary">
+          <div id="selection-text" style="color:var(--slate-soft);font-size:0.9rem;">No time selected yet</div>
+          <button class="btn btn-primary" id="confirm-btn" disabled>Confirm booking</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+  const user = requireAuth();
+  if (user) {
+    document.getElementById('user-avatar').textContent = initials(user.name);
+    document.getElementById('user-name').textContent = user.name.split(' ')[0];
+    document.getElementById('logout-btn').addEventListener('click', signOut);
+
+    let selectedDoctor = DOCTORS[0];
+    let selectedDay = 0;
+    let selectedSlot = null; // { index, label }
+
+    const doctorListEl = document.getElementById('doctor-list');
+    function renderDoctors() {
+      doctorListEl.innerHTML = '';
+      DOCTORS.forEach(doc => {
+        const btn = document.createElement('button');
+        btn.className = 'doctor-card' + (doc.id === selectedDoctor.id ? ' selected' : '');
+        btn.innerHTML = `
+          <span class="avatar">${doc.initials}</span>
+          <span>
+            <span class="name" style="display:block;">${doc.name}</span>
+            <span class="spec">${doc.spec}</span>
+          </span>`;
+        btn.addEventListener('click', () => {
+          selectedDoctor = doc;
+          selectedSlot = null;
+          renderDoctors();
+          renderDial();
+          updateSummary();
+        });
+        doctorListEl.appendChild(btn);
+      });
+    }
+
+    const dayTabsEl = document.getElementById('day-tabs');
+    function renderDayTabs() {
+      dayTabsEl.innerHTML = '';
+      for (let i = 0; i < 5; i++) {
+        const tab = document.createElement('button');
+        tab.type = 'button';
+        tab.className = 'day-tab' + (i === selectedDay ? ' active' : '');
+        tab.textContent = i === 0 ? 'Today' : dayLabel(i).split(',')[0];
+        tab.addEventListener('click', () => {
+          selectedDay = i;
+          selectedSlot = null;
+          renderDayTabs();
+          renderDial();
+          updateSummary();
+        });
+        dayTabsEl.appendChild(tab);
+      }
+    }
+
+    const dialEl = document.getElementById('dial');
+    function renderDial() {
+      buildDial(dialEl, selectedDoctor.id, selectedDay, (index, label, groupEl) => {
+        selectedSlot = { index, label };
+        [...dialEl.querySelectorAll('.slot-outer')].forEach(c => {
+          c.setAttribute('fill', c.parentElement.classList.contains('taken') ? '#E3E8E4' : '#4C7A63');
+          c.setAttribute('r', 7);
+        });
+        const outer = groupEl.querySelector('.slot-outer');
+        outer.setAttribute('fill', '#E8674B');
+        outer.setAttribute('r', 9);
+        updateSummary();
+      });
+    }
+
+    function updateSummary() {
+      const text = document.getElementById('selection-text');
+      const btn = document.getElementById('confirm-btn');
+      if (selectedSlot) {
+        text.innerHTML = `<strong style="color:var(--ink);">${selectedDoctor.name}</strong> · ${dayLabel(selectedDay)} · ${selectedSlot.label}`;
+        btn.disabled = false;
+      } else {
+        text.textContent = 'No time selected yet';
+        btn.disabled = true;
+      }
+    }
+
+    document.getElementById('confirm-btn').addEventListener('click', () => {
+      if (!selectedSlot) return;
+      const d = formatDay(selectedDay);
+      const [h, m] = (() => {
+        const totalMin = 9 * 60 + selectedSlot.index * 30;
+        return [Math.floor(totalMin / 60), totalMin % 60];
+      })();
+      d.setHours(h, m, 0, 0);
+
+      const appt = {
+        id: 'a' + Date.now(),
+        userId: user.id,
+        doctorName: selectedDoctor.name,
+        spec: selectedDoctor.spec,
+        isoDate: d.toISOString(),
+        label: selectedSlot.label,
+      };
+      saveAppointment(appt);
+      sessionStorage.setItem('sh_last_appt', JSON.stringify(appt));
+      window.location.href = 'confirmation.html';
+    });
+
+    renderDoctors();
+    renderDayTabs();
+    renderDial();
+  }
+</script>
+</body>
+</html>

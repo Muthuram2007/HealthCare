@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Solstice Health</title>
+<link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 26 26" fill="none">
+        <circle cx="13" cy="13" r="6" fill="#9FCCB2"/>
+        <g stroke="#9FCCB2" stroke-width="1.6" stroke-linecap="round">
+          <line x1="13" y1="1" x2="13" y2="4"/>
+          <line x1="13" y1="22" x2="13" y2="25"/>
+          <line x1="1" y1="13" x2="4" y2="13"/>
+          <line x1="22" y1="13" x2="25" y2="13"/>
+        </g>
+      </svg>
+      Solstice
+    </div>
+    <ul class="nav-list">
+      <li><a href="dashboard.html" class="active">Overview</a></li>
+      <li><a href="book.html">Book appointment</a></li>
+      <li><a href="dashboard.html#history">My appointments</a></li>
+    </ul>
+    <div class="sidebar-foot">
+      <div class="user-chip">
+        <span class="avatar" id="user-avatar">?</span>
+        <span id="user-name">—</span>
+      </div>
+      <button class="logout-link" id="logout-btn" type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topline">
+      <div>
+        <p class="eyebrow">Overview</p>
+        <h1 id="greeting" style="font-size:1.7rem;">Good day</h1>
+      </div>
+      <a href="book.html" class="btn btn-primary">Book appointment</a>
+    </div>
+
+    <section style="margin-bottom:32px;">
+      <p class="eyebrow" style="margin-bottom:12px;">Next up</p>
+      <div id="next-appt-slot"></div>
+    </section>
+
+    <section id="history">
+      <p class="eyebrow" style="margin-bottom:12px;">All appointments</p>
+      <div class="card" style="padding:8px 24px;">
+        <div id="appt-list"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+  const user = requireAuth();
+  if (user) {
+    document.getElementById('user-avatar').textContent = initials(user.name);
+    document.getElementById('user-name').textContent = user.name.split(' ')[0];
+    const hour = new Date().getHours();
+    const greetingWord = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    document.getElementById('greeting').textContent = `${greetingWord}, ${user.name.split(' ')[0]}`;
+
+    document.getElementById('logout-btn').addEventListener('click', signOut);
+
+    const appts = getAppointments(user.id).sort((a, b) => new Date(a.isoDate) - new Date(b.isoDate));
+    const now = new Date();
+    const upcoming = appts.filter(a => new Date(a.isoDate) >= now);
+    const past = appts.filter(a => new Date(a.isoDate) < now);
+
+    const nextSlot = document.getElementById('next-appt-slot');
+    if (upcoming.length === 0) {
+      nextSlot.innerHTML = `
+        <div class="card empty-state">
+          <p style="font-family:'Fraunces',serif;font-size:1.1rem;color:var(--ink);margin-bottom:6px;">Nothing on the calendar yet</p>
+          <p style="margin-bottom:16px;">Book your first visit and it'll show up here.</p>
+          <a href="book.html" class="btn btn-dark">Book appointment</a>
+        </div>`;
+    } else {
+      const a = upcoming[0];
+      const d = new Date(a.isoDate);
+      nextSlot.innerHTML = `
+        <div class="ticket">
+          <div class="ticket-main">
+            <span class="pill pill-upcoming">Upcoming</span>
+            <h2 style="font-size:1.3rem;margin-top:10px;">${a.doctorName}</h2>
+            <p style="color:var(--slate-soft);margin-top:2px;">${a.spec}</p>
+            <p class="mono" style="margin-top:14px;font-size:0.85rem;color:var(--slate);">
+              ${d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} · ${a.label}
+            </p>
+          </div>
+          <div class="ticket-stub">
+            <span class="ticket-tear"></span>
+            <span class="big">${d.getDate()}</span>
+            <span class="small">${d.toLocaleDateString(undefined, { month: 'short' })}</span>
+          </div>
+        </div>`;
+    }
+
+    const listEl = document.getElementById('appt-list');
+    if (appts.length === 0) {
+      listEl.innerHTML = `<div class="empty-state">No appointments booked yet.</div>`;
+    } else {
+      listEl.innerHTML = [...upcoming, ...past.reverse()].map(a => {
+        const d = new Date(a.isoDate);
+        const isPast = d < now;
+        return `
+        <div class="appt-row">
+          <div>
+            <p style="font-weight:600;color:var(--ink);">${a.doctorName}</p>
+            <p style="font-size:0.85rem;color:var(--slate-soft);">${a.spec}</p>
+          </div>
+          <div class="mono" style="font-size:0.85rem;color:var(--slate);text-align:right;">
+            ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}<br>${a.label}
+          </div>
+          <span class="pill ${isPast ? 'pill-past' : 'pill-upcoming'}">${isPast ? 'Past' : 'Upcoming'}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+</script>
+</body>
+</html>
